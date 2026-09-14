@@ -121,6 +121,16 @@ class NewsManager {
     }
 
     /**
+     * Tutup Modal Popup Berita
+     */
+    closePopup() {
+        const modal = document.getElementById('news-announcement-modal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+    }
+
+    /**
      * Tampilkan Modal Berita
      */
     showPopup(newsItem) {
@@ -318,3 +328,6 @@ class NewsManager {
 
 // Global instance
 window.newsManager = new NewsManager();
+window.closeNewsModal = function() {
+    window.newsManager?.closePopup();
+};
