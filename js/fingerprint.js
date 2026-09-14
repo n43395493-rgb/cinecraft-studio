@@ -13,111 +13,36 @@ class DeviceFingerprint {
     /**
      * Dapatkan UUID unik yang tersimpan persisten di LocalStorage untuk memperkuat integritas device
      */
-    getPersistentUUID() {
-        const STORAGE_KEY = 'nexus_device_guid';
-        let uuid = localStorage.getItem(STORAGE_KEY);
-        if (!uuid) {
-            uuid = 'DEV-' + 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0;
-                const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16).toUpperCase();
-            });
-            localStorage.setItem(STORAGE_KEY, uuid);
-        }
-        return uuid;
-    }
-
     /**
-     * Canvas Fingerprint Hash
+     * Dapatkan Unmasked GPU Chipset murni fisik
      */
-    getCanvasFingerprint() {
-        try {
-            const canvas = document.createElement('canvas');
-            canvas.width = 280;
-            canvas.height = 60;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return 'canvas_unsupported';
-
-            // Text with different fonts and styling
-            ctx.textBaseline = 'top';
-            ctx.font = "14px 'Arial', sans-serif";
-            ctx.textBaseline = 'alphabetic';
-            ctx.fillStyle = '#f60';
-            ctx.fillRect(125, 1, 62, 20);
-
-            ctx.fillStyle = '#069';
-            ctx.fillText('NexusHWID,🔒#@1.0', 2, 15);
-            ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-            ctx.fillText('NexusHWID,🔒#@1.0', 4, 17);
-
-            // Canvas blending & arcs
-            ctx.globalCompositeOperation = 'multiply';
-            ctx.fillStyle = 'rgb(255,0,255)';
-            ctx.beginPath();
-            ctx.arc(50, 30, 20, 0, Math.PI * 2, true);
-            ctx.closePath();
-            ctx.fill();
-
-            return canvas.toDataURL();
-        } catch (e) {
-            return 'canvas_error_' + e.message;
-        }
-    }
-
-    /**
-     * WebGL GPU & Renderer Fingerprint
-     */
-    getWebGLFingerprint() {
+    getNormalizedGPU() {
         try {
             const canvas = document.createElement('canvas');
             const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            if (!gl) return { vendor: 'no_webgl', renderer: 'no_webgl' };
+            if (!gl) return { vendor: 'GenericGPU', renderer: 'GenericRenderer' };
 
             const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-            if (!debugInfo) return { vendor: 'generic', renderer: 'generic' };
+            if (!debugInfo) return { vendor: 'GenericGPU', renderer: 'GenericRenderer' };
 
-            const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || 'unknown_vendor';
-            const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'unknown_renderer';
-            return { vendor, renderer };
-        } catch (e) {
-            return { vendor: 'error', renderer: 'error' };
-        }
-    }
+            const rawVendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '';
+            let rawRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
 
-    /**
-     * AudioContext Fingerprint
-     */
-    async getAudioFingerprint() {
-        try {
-            const AudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-            if (!AudioContext) return 'no_audio_ctx';
-
-            const context = new AudioContext(1, 44100, 44100);
-            const oscillator = context.createOscillator();
-            oscillator.type = 'triangle';
-            oscillator.frequency.setValueAtTime(10000, context.currentTime);
-
-            const compressor = context.createDynamicsCompressor();
-            compressor.threshold.setValueAtTime(-50, context.currentTime);
-            compressor.knee.setValueAtTime(40, context.currentTime);
-            compressor.ratio.setValueAtTime(12, context.currentTime);
-            compressor.reduction.setValueAtTime(-20, context.currentTime);
-            compressor.attack.setValueAtTime(0, context.currentTime);
-            compressor.release.setValueAtTime(0.25, context.currentTime);
-
-            oscillator.connect(compressor);
-            compressor.connect(context.destination);
-            oscillator.start(0);
-
-            const renderedBuffer = await context.startRendering();
-            const output = renderedBuffer.getChannelData(0);
-            let sum = 0;
-            for (let i = 4500; i < 5000; i++) {
-                sum += Math.abs(output[i] || 0);
+            // Bersihkan wrapper browser seperti "ANGLE (...)" agar identik di Chrome, Edge, Firefox, Brave
+            // Contoh: "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs OpenGL)" -> "NVIDIA GeForce RTX 3060"
+            let cleanRenderer = rawRenderer;
+            const match = rawRenderer.match(/ANGLE\s*\(([^,]+),\s*([^,]+?)(?:Direct3D|OpenGL|Vulkan|vs_|\))/i);
+            if (match && match[2]) {
+                cleanRenderer = match[2].trim();
             }
-            return sum.toString();
+
+            return {
+                vendor: rawVendor.replace(/\s+/g, ' ').trim(),
+                renderer: cleanRenderer.replace(/\s+/g, ' ').trim(),
+                rawRenderer: rawRenderer
+            };
         } catch (e) {
-            return 'audio_fallback_val';
+            return { vendor: 'UnknownVendor', renderer: 'UnknownRenderer', rawRenderer: '' };
         }
     }
 
@@ -146,7 +71,8 @@ class DeviceFingerprint {
     }
 
     /**
-     * Dapatkan detail lengkap hardware dan Hardware ID ter-hash
+     * Dapatkan detail lengkap hardware murni PC (Cross-Browser Physical PC ID)
+     * Tidak menggunakan random UUID localStorage agar konsisten di semua browser pada PC yang sama.
      */
     async getHardwareInfo() {
         if (this.cachedHWID && this.deviceDetails) {
@@ -156,45 +82,40 @@ class DeviceFingerprint {
             };
         }
 
-        const persistentUUID = this.getPersistentUUID();
-        const canvasData = this.getCanvasFingerprint();
-        const webgl = this.getWebGLFingerprint();
-        const audioHash = await this.getAudioFingerprint();
+        const gpu = this.getNormalizedGPU();
 
         const screenInfo = {
             width: window.screen.width || 0,
             height: window.screen.height || 0,
-            availWidth: window.screen.availWidth || 0,
-            availHeight: window.screen.availHeight || 0,
-            colorDepth: window.screen.colorDepth || 0,
-            pixelRatio: window.devicePixelRatio || 1
+            colorDepth: window.screen.colorDepth || 24,
+            pixelRatio: Math.round((window.devicePixelRatio || 1) * 100) / 100
         };
 
         const systemInfo = {
             cores: navigator.hardwareConcurrency || 4,
             memory: navigator.deviceMemory || 8,
-            platform: navigator.platform || 'Unknown',
-            language: navigator.language || 'en-US',
+            platform: (navigator.userAgentData?.platform || navigator.platform || 'Win32').replace(/[^a-zA-Z0-9]/g, ''),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-            touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0
+            timezoneOffset: new Date().getTimezoneOffset()
         };
 
-        // Combine into signature string
+        // Signature murni spesifikasi fisik perangkat PC:
+        // GPU Chipset + Resolusi Layar + Kedalaman Warna + Jumlah CPU Core + RAM + OS Platform + Timezone
         const signature = [
-            persistentUUID,
-            webgl.vendor,
-            webgl.renderer,
-            screenInfo.width + 'x' + screenInfo.height + '@' + screenInfo.colorDepth,
-            systemInfo.cores + 'cores',
+            'PC_HARDWARE_V2',
+            gpu.vendor,
+            gpu.renderer,
+            `${screenInfo.width}x${screenInfo.height}@${screenInfo.colorDepth}`,
+            `${systemInfo.cores}cores`,
+            `${systemInfo.memory}gb`,
             systemInfo.platform,
             systemInfo.timezone,
-            audioHash,
-            canvasData.substring(0, 100)
-        ].join('|||');
+            `${systemInfo.timezoneOffset}min`
+        ].join('###');
 
         const rawHash = await this.sha256(signature);
         
-        // Format HWID yang rapi: NX-XXXX-XXXX-XXXX-XXXX
+        // Format HWID yang rapi & konsisten: NX-XXXX-XXXX-XXXX-XXXX
         const formattedHWID = 'NX-' + [
             rawHash.substring(0, 4),
             rawHash.substring(4, 8),
@@ -202,15 +123,14 @@ class DeviceFingerprint {
             rawHash.substring(12, 16)
         ].join('-').toUpperCase();
 
-        const readableName = `${systemInfo.platform} (${screenInfo.width}x${screenInfo.height}, ${systemInfo.cores} Cores, ${webgl.renderer.substring(0, 25)})`;
+        const readableName = `${systemInfo.platform} (${screenInfo.width}x${screenInfo.height}, ${systemInfo.cores} CPU Cores, ${gpu.renderer})`;
 
         this.cachedHWID = formattedHWID;
         this.deviceDetails = {
             hwid: formattedHWID,
             rawHash: rawHash,
-            uuid: persistentUUID,
-            gpuRenderer: webgl.renderer,
-            gpuVendor: webgl.vendor,
+            gpuRenderer: gpu.renderer,
+            gpuVendor: gpu.vendor,
             resolution: `${screenInfo.width}x${screenInfo.height}`,
             cpuCores: systemInfo.cores,
             ramGb: systemInfo.memory,
