@@ -19,6 +19,30 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
+ * Admin Panel Tab Switcher
+ */
+window.switchAdminTab = function(tabName) {
+    const tabs = ['users', 'tools', 'news'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`btn-tab-admin-${t}`);
+        const pane = document.getElementById(`admin-tab-pane-${t}`);
+        if (t === tabName) {
+            btn?.classList.add('active');
+            pane?.classList.remove('hidden');
+        } else {
+            btn?.classList.remove('active');
+            pane?.classList.add('hidden');
+        }
+    });
+
+    if (tabName === 'users' && window.userManager) {
+        window.userManager.fetchUsers();
+    } else if (tabName === 'news' && window.newsManager) {
+        window.newsManager.fetchNews();
+    }
+};
+
+/**
  * Toast Notification System
  */
 window.showToast = function(message, type = 'info') {
