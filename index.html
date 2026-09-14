@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CineCraft AI Studio - Creative Tools Hub</title>
+    <meta name="description" content="Pusat akses tools AI Studio: Drama, Film, Video, Dubbing & Storyboard.">
+    
+    <!-- Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Main Style -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Background Ambient Glowing Lights -->
+    <canvas id="bg-canvas"></canvas>
+    <div class="glow-orb-1"></div>
+    <div class="glow-orb-2"></div>
+
+    <!-- Navigation Header -->
+    <nav class="navbar">
+        <div class="container nav-wrapper">
+            <a href="#" class="brand-logo">
+                <div class="brand-icon-box">
+                    <i class="fa-solid fa-film"></i>
+                </div>
+                <span>Cine<span class="brand-gradient">Craft AI</span></span>
+            </a>
+
+            <div class="nav-auth-group">
+                <!-- Guest View (Belum Login) -->
+                <button class="btn btn-primary btn-open-login auth-guest-only">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i> <span>Masuk Studio</span>
+                </button>
+
+                <!-- Member View (Sudah Login) -->
+                <div class="auth-member-only hidden" style="display:flex; align-items:center; gap:12px;">
+                    <button class="btn btn-secondary btn-sm btn-open-latest-news" title="Buka Berita / Pengumuman Terbaru" style="display:flex; align-items:center; gap:6px; background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.4); color:var(--primary-light);">
+                        <i class="fa-solid fa-bullhorn"></i> <span>Berita</span>
+                    </button>
+                    <div style="font-size:0.9rem; color:var(--text-secondary); text-align:right;">
+                        <span style="display:block; font-size:0.75rem; color:var(--primary-light); font-weight:700;" class="display-user-role">MEMBER</span>
+                        <strong class="display-user-name" style="color:#fff;">User</strong>
+                    </div>
+                    <button class="btn btn-danger-soft btn-sm btn-do-logout" title="Keluar dari Studio">
+                        <i class="fa-solid fa-right-from-bracket"></i> Keluar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="container" style="padding-top: 40px; padding-bottom: 80px; max-width: 1100px;">
+        
+        <!-- Header Judul & Deskripsi Sederhana -->
+        <header style="text-align: center; margin-bottom: 45px;">
+            <h1 class="hero-title" style="margin-bottom: 14px; font-size: clamp(2rem, 4.5vw, 3.2rem);">
+                CineCraft <span class="text-gradient">Studio Hub</span>
+            </h1>
+            <p class="hero-subtitle" style="max-width: 620px; margin: 0 auto; font-size: 1.05rem; color: var(--text-secondary);">
+                Pusat akses tools AI kreatif: Generate Drama, Cinematic Film, Video Automation, Voice Dubbing, & Storyboard.
+            </p>
+        </header>
+
+        <!-- Guest Warning / Login Prompt Box (Muncul hanya jika belum login) -->
+        <div class="auth-guest-only" style="background: var(--bg-card); border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: 36px 24px; text-align: center; backdrop-filter: blur(14px); margin-bottom: 30px; box-shadow: var(--shadow-card);">
+            <div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: var(--primary-light); margin: 0 auto 16px;">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 8px; color: #fff;">Akses Khusus Kreator</h3>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; max-width: 480px; margin: 0 auto 22px;">
+                Silakan masuk dengan username Anda untuk membuka seluruh kartu tools generator AI.
+            </p>
+            <button class="btn btn-primary btn-lg btn-open-login">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i> Masuk Sekarang
+            </button>
+        </div>
+
+        <!-- Dashboard Member Area (Muncul saat Login) -->
+        <div class="auth-member-only hidden">
+            
+            <!-- ADMIN ONLY: MANAGEMENT PANEL (CARDS & NEWS) -->
+            <div class="admin-only-feature hidden" style="margin-bottom: 36px;">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+                    
+                    <!-- 1. Form Tambah Tool Baru -->
+                    <div id="admin-create-card-box" class="admin-card-creator" style="margin-bottom:0;">
+                        <div class="admin-card-creator-header">
+                            <i class="fa-solid fa-circle-plus"></i>
+                            <span>Tambah Kartu Tool (Admin)</span>
+                        </div>
+
+                        <form id="create-card-form" onsubmit="event.preventDefault(); window.cardManager.createCard(document.getElementById('card-title-input').value, document.getElementById('card-url-input').value);">
+                            <div style="display:flex; flex-direction:column; gap:12px;">
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label class="form-label" for="card-title-input">Nama Tool / Generator</label>
+                                    <div class="input-icon-wrap">
+                                        <i class="fa-solid fa-film"></i>
+                                        <input type="text" id="card-title-input" class="form-control" placeholder="Contoh: AI Drama Generator..." required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label class="form-label" for="card-url-input">Link Akses URL</label>
+                                    <div class="input-icon-wrap">
+                                        <i class="fa-solid fa-link"></i>
+                                        <input type="text" id="card-url-input" class="form-control" placeholder="https://..." required>
+                                    </div>
+                                </div>
+
+                                <button type="submit" id="btn-save-card" class="btn btn-primary" style="width:100%; padding:11px 20px; margin-top:4px;">
+                                    <i class="fa-solid fa-plus"></i> Simpan Kartu Tool
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 2. Form Buat Berita / Pengumuman Baru -->
+                    <div id="admin-create-news-box" class="admin-card-creator" style="margin-bottom:0; background:rgba(6, 78, 59, 0.2); border-color:rgba(52, 211, 153, 0.3);">
+                        <div class="admin-card-creator-header" style="color:#34d399;">
+                            <i class="fa-solid fa-bullhorn"></i>
+                            <span>Buat Berita / Pengumuman (Admin)</span>
+                        </div>
+
+                        <form id="create-news-form">
+                            <div style="display:flex; flex-direction:column; gap:12px;">
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label class="form-label" for="news-title-input">Header Judul Berita</label>
+                                    <div class="input-icon-wrap">
+                                        <i class="fa-solid fa-heading"></i>
+                                        <input type="text" id="news-title-input" class="form-control" placeholder="Contoh: Update Fitur Generator Baru..." required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label class="form-label" for="news-content-input">Deskripsi / Isi Berita</label>
+                                    <textarea id="news-content-input" class="form-control" rows="3" placeholder="Tuliskan detail pengumuman atau berita studio..." style="resize:vertical; min-height:75px; font-family:var(--font-main);" required></textarea>
+                                </div>
+
+                                <button type="submit" id="btn-save-news" class="btn btn-cyan" style="width:100%; padding:11px 20px; margin-top:4px;">
+                                    <i class="fa-solid fa-paper-plane"></i> Publikasikan Berita
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Riwayat Berita Admin -->
+                        <div style="margin-top:16px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+                            <div style="font-size:0.8rem; font-weight:700; color:var(--text-secondary); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                                <span>Daftar Berita Aktif:</span>
+                                <button type="button" class="btn btn-secondary btn-sm" style="padding:2px 6px; font-size:0.7rem;" onclick="window.newsManager.fetchNews()">
+                                    <i class="fa-solid fa-rotate"></i>
+                                </button>
+                            </div>
+                            <div id="admin-news-list-container">
+                                <!-- Dimuat oleh newsManager.renderAdminNewsList() -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- KARTU TOOLS GRID -->
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2 style="font-size:1.3rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-grip" style="color:var(--primary-light);"></i> Daftar Tools Generator
+                    </h2>
+                    <button class="btn btn-secondary btn-sm" onclick="window.cardManager.loadCards()" title="Muat Ulang Kartu">
+                        <i class="fa-solid fa-rotate"></i> Refresh
+                    </button>
+                </div>
+
+                <!-- Dynamic Cards Grid Container -->
+                <div id="member-cards-container" class="link-cards-grid">
+                    <!-- Dimuat oleh cardManager.renderCards() -->
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer Simple -->
+    <footer style="text-align: center; padding: 24px 0; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid rgba(255,255,255,0.05);">
+        &copy; 2026 CineCraft AI Studio. All Rights Reserved.
+    </footer>
+
+    <!-- ================= MODAL AUTH (LOGIN & REGISTER) ================= -->
+    <div id="login-modal" class="modal-wrapper">
+        <div class="modal-backdrop"></div>
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fa-solid fa-film text-gradient"></i> Akses CineCraft Studio</div>
+                <button class="modal-close">&times;</button>
+            </div>
+
+            <!-- Tab Switcher: Masuk vs Daftar Baru -->
+            <div class="auth-tabs-wrap" style="display:flex; background:rgba(0,0,0,0.4); padding:4px; border-radius:10px; margin-bottom:20px; border:1px solid rgba(255,255,255,0.08);">
+                <button type="button" id="tab-btn-login" class="auth-tab-btn active" style="flex:1; padding:9px; border-radius:8px; border:none; background:transparent; color:#fff; font-weight:600; cursor:pointer; font-size:0.9rem; transition:all 0.2s;">
+                    <i class="fa-solid fa-right-to-bracket"></i> Masuk Akun
+                </button>
+                <button type="button" id="tab-btn-register" class="auth-tab-btn" style="flex:1; padding:9px; border-radius:8px; border:none; background:transparent; color:var(--text-muted); font-weight:600; cursor:pointer; font-size:0.9rem; transition:all 0.2s;">
+                    <i class="fa-solid fa-user-plus"></i> Buat Baru
+                </button>
+            </div>
+
+            <!-- FORM 1: LOGIN -->
+            <form id="login-form">
+                <div class="form-group">
+                    <label class="form-label" for="login-username">Username Terdaftar</label>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="login-username" class="form-control" placeholder="Masukkan username Anda..." required autocomplete="username">
+                    </div>
+                </div>
+
+                <button type="submit" id="login-submit-btn" class="btn btn-primary btn-lg" style="width:100%; margin-top:8px;">
+                    <i class="fa-solid fa-spinner fa-spin btn-spinner hidden"></i>
+                    <span class="btn-text">Masuk ke Studio</span>
+                </button>
+
+                <div style="text-align:center; margin-top:16px;">
+                    <button type="button" class="btn-switch-to-register" style="background:none; border:none; color:var(--primary-light); font-size:0.85rem; cursor:pointer; text-decoration:underline;">
+                        Belum punya akun? Buat akun baru di sini
+                    </button>
+                </div>
+            </form>
+
+            <!-- FORM 2: REGISTER (BUAT BARU) -->
+            <form id="register-form" class="hidden">
+                <div class="form-group">
+                    <label class="form-label" for="register-username">Username Baru yang Diinginkan</label>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <input type="text" id="register-username" class="form-control" placeholder="Tulis username baru..." required autocomplete="off">
+                    </div>
+                    <small style="color:var(--text-muted); font-size:0.78rem; margin-top:6px; display:block;">
+                        *Akun baru otomatis berstatus nonaktif dan perlu aktivasi admin sebelum bisa login.
+                    </small>
+                </div>
+
+                <button type="submit" id="register-submit-btn" class="btn btn-cyan btn-lg" style="width:100%; margin-top:8px;">
+                    <i class="fa-solid fa-spinner fa-spin btn-spinner hidden"></i>
+                    <span class="btn-text">Daftarkan Akun Baru</span>
+                </button>
+
+                <div style="text-align:center; margin-top:16px;">
+                    <button type="button" class="btn-switch-to-login" style="background:none; border:none; color:var(--text-secondary); font-size:0.85rem; cursor:pointer; text-decoration:underline;">
+                        Sudah punya akun? Masuk di sini
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODAL POPUP BERITA / PENGUMUMAN ================= -->
+    <div id="news-announcement-modal" class="modal-wrapper">
+        <div class="modal-backdrop"></div>
+        <div class="modal-card" style="max-width: 520px; border-color: rgba(99, 102, 241, 0.4); box-shadow: 0 0 45px rgba(99, 102, 241, 0.3);">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px; margin-bottom: 16px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg, var(--primary), var(--secondary)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.95rem;">
+                        <i class="fa-solid fa-bullhorn"></i>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; color:var(--primary-light); font-weight:800; display:block;">PENGUMUMAN RESMI</span>
+                        <div class="modal-title" style="font-size:1.15rem;">CineCraft Studio News</div>
+                    </div>
+                </div>
+                <button class="modal-close">&times;</button>
+            </div>
+
+            <!-- Date Time Badge -->
+            <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:4px 12px; border-radius:20px; font-size:0.78rem; color:var(--text-secondary); margin-bottom:14px;" id="news-modal-time">
+                <i class="fa-regular fa-clock"></i> 15 Sep 2026, 00:00 WIB
+            </div>
+
+            <!-- Header Judul Berita -->
+            <h3 id="news-modal-title" style="font-size: 1.35rem; font-weight: 800; color: #fff; margin-bottom: 14px; line-height: 1.4;">
+                Judul Berita
+            </h3>
+
+            <!-- Deskripsi Berita -->
+            <div id="news-modal-content" style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.65; max-height: 240px; overflow-y: auto; background: rgba(0,0,0,0.35); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 22px;">
+                Isi deskripsi pengumuman berita akan dimuat di sini...
+            </div>
+
+            <button class="btn btn-primary btn-lg btn-close-modal" style="width: 100%;">
+                <i class="fa-solid fa-check"></i> Mengerti & Tutup
+            </button>
+        </div>
+    </div>
+
+    <!-- Alert / Notification Dialog Modal -->
+    <div id="alert-modal" class="modal-wrapper">
+        <div class="modal-backdrop"></div>
+        <div class="modal-card" style="text-align:center;">
+            <div style="font-size:3rem; margin-bottom:14px;">
+                <i id="alert-modal-icon" class="fa-solid fa-triangle-exclamation text-danger"></i>
+            </div>
+            <h3 id="alert-modal-title" style="font-size:1.3rem; font-weight:800; margin-bottom:10px;">Pemberitahuan</h3>
+            <p id="alert-modal-message" style="color:var(--text-secondary); font-size:0.92rem; line-height:1.6; margin-bottom:20px; text-align:left; background:rgba(0,0,0,0.3); padding:14px; border-radius:8px;">
+                Pesan notifikasi
+            </p>
+            <div id="alert-modal-action-wrap"></div>
+            <button class="btn btn-secondary btn-close-modal" style="width:100%;">Tutup</button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/fingerprint.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/cards.js"></script>
+    <script src="js/news.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
