@@ -16,33 +16,43 @@ class DeviceFingerprint {
     /**
      * Dapatkan Unmasked GPU Chipset murni fisik
      */
+    /**
+     * Dapatkan Unmasked GPU Chipset murni fisik tanpa wrapper browser
+     * Menyamakan output antara Chrome, Edge, Firefox, Brave, & Opera pada PC yang sama.
+     */
     getNormalizedGPU() {
         try {
             const canvas = document.createElement('canvas');
             const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            if (!gl) return { vendor: 'GenericGPU', renderer: 'GenericRenderer' };
+            if (!gl) return { model: 'GENERIC_PC_GPU', raw: 'Standard Display' };
 
             const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-            if (!debugInfo) return { vendor: 'GenericGPU', renderer: 'GenericRenderer' };
+            const rawVendor = debugInfo ? (gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '') : '';
+            const rawRenderer = debugInfo ? (gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '') : '';
 
-            const rawVendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '';
-            let rawRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
-
-            // Bersihkan wrapper browser seperti "ANGLE (...)" agar identik di Chrome, Edge, Firefox, Brave
-            // Contoh: "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs OpenGL)" -> "NVIDIA GeForce RTX 3060"
-            let cleanRenderer = rawRenderer;
-            const match = rawRenderer.match(/ANGLE\s*\(([^,]+),\s*([^,]+?)(?:Direct3D|OpenGL|Vulkan|vs_|\))/i);
-            if (match && match[2]) {
-                cleanRenderer = match[2].trim();
-            }
+            // Ekstrak nama GPU dan hapus semua noise spesifik browser (PCIe ID, ANGLE, D3D11, dll)
+            let cleaned = (rawVendor + ' ' + rawRenderer).toUpperCase()
+                .replace(/ANGLE\s*\(/g, '')
+                .replace(/\(0X[0-9A-F]+\)/gi, '') // Hapus Device ID hex (0x00002504)
+                .replace(/DIRECT3D\d*/gi, '')
+                .replace(/OPENGL\s*ENGINE/gi, '')
+                .replace(/VS_\d+_\d+/gi, '')
+                .replace(/PS_\d+_\d+/gi, '')
+                .replace(/\/PCIE\/SSE\d*/gi, '')
+                .replace(/D3D\d*/gi, '')
+                .replace(/VULKAN/gi, '')
+                .replace(/MESA/gi, '')
+                .replace(/BASIC RENDER DRIVER/gi, '')
+                .replace(/[^A-Z0-9]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
 
             return {
-                vendor: rawVendor.replace(/\s+/g, ' ').trim(),
-                renderer: cleanRenderer.replace(/\s+/g, ' ').trim(),
-                rawRenderer: rawRenderer
+                model: cleaned || 'PC_GRAPHICS_CARD',
+                raw: rawRenderer || rawVendor || 'Graphics Card'
             };
         } catch (e) {
-            return { vendor: 'UnknownVendor', renderer: 'UnknownRenderer', rawRenderer: '' };
+            return { model: 'PC_GRAPHICS_CARD', raw: 'Standard GPU' };
         }
     }
 
@@ -71,8 +81,8 @@ class DeviceFingerprint {
     }
 
     /**
-     * Dapatkan detail lengkap hardware murni PC (Cross-Browser Physical PC ID)
-     * Tidak menggunakan random UUID localStorage agar konsisten di semua browser pada PC yang sama.
+     * Dapatkan detail lengkap hardware murni fisik PC (Cross-Browser Universal HWID)
+     * Parameter yang dipakai: GPU Model + Resolusi Monitor + CPU Cores + Timezone + OS Platform
      */
     async getHardwareInfo() {
         if (this.cachedHWID && this.deviceDetails) {
@@ -87,27 +97,22 @@ class DeviceFingerprint {
         const screenInfo = {
             width: window.screen.width || 0,
             height: window.screen.height || 0,
-            colorDepth: window.screen.colorDepth || 24,
-            pixelRatio: Math.round((window.devicePixelRatio || 1) * 100) / 100
+            colorDepth: window.screen.colorDepth || 24
         };
 
         const systemInfo = {
             cores: navigator.hardwareConcurrency || 4,
-            memory: navigator.deviceMemory || 8,
-            platform: (navigator.userAgentData?.platform || navigator.platform || 'Win32').replace(/[^a-zA-Z0-9]/g, ''),
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+            platform: (navigator.platform || 'Win32').replace(/[^a-zA-Z0-9]/g, ''),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Jakarta',
             timezoneOffset: new Date().getTimezoneOffset()
         };
 
-        // Signature murni spesifikasi fisik perangkat PC:
-        // GPU Chipset + Resolusi Layar + Kedalaman Warna + Jumlah CPU Core + RAM + OS Platform + Timezone
+        // Signature murni fisik komputer (Identik di Chrome, Edge, Firefox, Brave pada PC yang sama):
         const signature = [
-            'PC_HARDWARE_V2',
-            gpu.vendor,
-            gpu.renderer,
+            'PC_UNIVERSAL_HWID_V3',
+            gpu.model,
             `${screenInfo.width}x${screenInfo.height}@${screenInfo.colorDepth}`,
             `${systemInfo.cores}cores`,
-            `${systemInfo.memory}gb`,
             systemInfo.platform,
             systemInfo.timezone,
             `${systemInfo.timezoneOffset}min`
@@ -123,17 +128,16 @@ class DeviceFingerprint {
             rawHash.substring(12, 16)
         ].join('-').toUpperCase();
 
-        const readableName = `${systemInfo.platform} (${screenInfo.width}x${screenInfo.height}, ${systemInfo.cores} CPU Cores, ${gpu.renderer})`;
+        const readableName = `${systemInfo.platform} (${screenInfo.width}x${screenInfo.height}, ${systemInfo.cores} Cores, ${gpu.raw.substring(0, 30)})`;
 
         this.cachedHWID = formattedHWID;
         this.deviceDetails = {
             hwid: formattedHWID,
             rawHash: rawHash,
-            gpuRenderer: gpu.renderer,
-            gpuVendor: gpu.vendor,
+            gpuModel: gpu.model,
+            gpuRaw: gpu.raw,
             resolution: `${screenInfo.width}x${screenInfo.height}`,
             cpuCores: systemInfo.cores,
-            ramGb: systemInfo.memory,
             platform: systemInfo.platform,
             timezone: systemInfo.timezone,
             deviceSummary: readableName
