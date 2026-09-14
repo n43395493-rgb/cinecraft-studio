@@ -352,13 +352,17 @@ class AuthManager {
             window.cardManager.loadCards();
         }
 
-        // Tampilkan form admin jika role admin
+        // Tampilkan fitur admin jika role admin
         const isAdmin = user.role && user.role.toLowerCase() === 'admin';
         const adminTools = document.querySelectorAll('.admin-only-feature');
         adminTools.forEach(el => {
             if (isAdmin) el.classList.remove('hidden');
             else el.classList.add('hidden');
         });
+
+        if (isAdmin && window.userManager) {
+            window.userManager.fetchUsers();
+        }
 
         const authStatusBadge = document.getElementById('auth-status-indicator');
         if (authStatusBadge) {
