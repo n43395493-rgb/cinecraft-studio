@@ -1392,3 +1392,54 @@ body {
     box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
 }
 
+/* ================= ADMIN TABS STYLING ================= */
+.admin-tabs-nav {
+    display: flex;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 6px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-card);
+    margin-bottom: 20px;
+    overflow-x: auto;
+}
+
+.admin-tab-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+
+.admin-tab-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-tab-btn.active {
+    color: #fff;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(6, 182, 212, 0.2));
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+}
+
+.admin-tab-pane {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
